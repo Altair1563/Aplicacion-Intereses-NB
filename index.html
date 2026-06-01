@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Intereses Escolares</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>📚 Calculadora de Intereses Escolares</h1>
+        </header>
+
+        <!-- CONTENEDOR PRINCIPAL DE TABS -->
+        <div class="tabs-container">
+
+            <!-- SECCIÓN 1: Botones principales -->
+            <div class="tabs" id="tabsAcciones">
+                <button id="btnAplicarMensual" class="btn-aplicador verde">
+                    🧮 Aplicar Interés generales al sistema
+                </button>
+            </div>
+
+            <!-- SECCIÓN 2: Pestañas de escuelas (solo visibles si se elige “por cuota”) -->
+            <div id="seccionEscuelas" class="tabs oculto">
+                <div class="tab active" data-escuela="Inicial">Inicial / Primaria</div>
+                <div class="tab" data-escuela="SecundariaMB">Secundaria MB</div>
+                <div class="tab" data-escuela="Tecnica">Técnica</div>
+                <div class="tab" data-escuela="Superior">Superior</div>
+            </div>
+
+        </div>
+
+        <div class="app-container">
+            <!-- Formulario -->
+            <div class="form-section">
+                <h2 id="tituloEscuela">Escuela: Inicial / Primaria</h2><br>
+
+                <form id="formCalculo">
+                    <div class="form-group flex-row">
+                        <div style="flex:1; margin-right:10px;">
+                            <label for="mesCuota">Mes de la Cuota:</label>
+                            <select id="mesCuota" name="mesCuota" required>
+                                <option value="">Seleccione el mes</option>
+                                <option value="MARZO">Marzo</option>
+                                <option value="ABRIL">Abril</option>
+                                <option value="MAYO">Mayo</option>
+                                <option value="JUNIO">Junio</option>
+                                <option value="JULIO">Julio</option>
+                                <option value="AGOSTO">Agosto</option>
+                                <option value="SEPTIEMBRE">Septiembre</option>
+                                <option value="OCTUBRE">Octubre</option>
+                                <option value="NOVIEMBRE">Noviembre</option>
+                            </select>
+                        </div>
+
+                        <div id="valorOriginalContainer" style="flex:1; display:none;">
+                            <label for="valorOriginalInput">
+                                <p>Valor Original</p>
+                            </label>
+                            <input type="number" id="valorOriginalInput" step="0.01"
+                                placeholder="Ingrese valor original">
+                        </div>
+                    </div>
+
+                    <!-- Valor Original (editable y oculto hasta seleccionar mes) -->
+                    <div id="valorOriginalContainer" class="form-group" style="display:none;">
+                        <label for="valorOriginalInput"><b>Valor Original del Mes Seleccionado:</b></label>
+                        <input type="number" id="valorOriginalInput" step="0.01"
+                            style="padding:6px; border-radius:6px; border:1px solid #ccc;"
+                            placeholder="Ingrese valor original">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tipoBeca">Cuota / Beca:</label>
+                        <select id="tipoBeca" name="tipoBeca" required>
+                            <option value="">Seleccione tipo de beca</option>
+                            <option value="COMPLETO">Cuota Completa</option>
+                            <option value="BECA 50%">Beca 50%</option>
+                            <option value="BECA 25%">Beca 25%</option>
+                            <option value="BECA 75%">Beca 75%</option>
+                            <option value="BECA 100%">Beca 100%</option>
+                        </select>
+                    </div><br>
+
+                    <div class="form-group">
+                        <label for="fechaVencimiento">Vencimiento Original:</label>
+                        <input class="fechaVencimiento" type="text" id="fechaVencimiento" name="fechaVencimiento"
+                            readonly placeholder=""><br><br>
+
+                        <label for="fechaInicioInteres">Desde esta fecha lleva interés:</label>
+                        <input class="fechaInicioInteres" type="text" id="fechaInicioInteres" name="fechaInicioInteres"
+                            readonly placeholder="">
+                    </div><br>
+
+                    <div class="form-group">
+                        <label for="fechaPago">Fecha Real de Pago:</label>
+                        <input type="date" id="fechaPago" name="fechaPago" required>
+                    </div><br>
+
+                    <button type="submit" class="btn-calcular">Calcular Interés</button>
+                </form>
+            </div>
+
+            <!-- Resultado -->
+            <div id="resultado" class="result-section" style="display: none;"></div>
+        </div>
+
+        <!-- Información de cuotas base -->
+        <div class="info-section">
+            <h3>Información de Cuotas Base (<span id="labelEscuelaTabla">Inicial / Primaria</span>)</h3>
+            <div id="tablaCuotas"></div>
+        </div>
+    </div>
+
+    <script src="js/script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnAplicarMensual = document.getElementById('btnAplicarMensual');
+            const btnAplicarPorCuota = document.getElementById('btnAplicarPorCuota');
+            const seccionEscuelas = document.getElementById('seccionEscuelas');
+
+            // Asegurarnos de que esté oculto al inicio
+            if (seccionEscuelas && !seccionEscuelas.classList.contains('oculto')) {
+                seccionEscuelas.classList.add('oculto');
+            }
+
+            // Botón: abrir aplicador mensual (si querés abrir otra página)
+            if (btnAplicarMensual) {
+                btnAplicarMensual.addEventListener('click', () => {
+                    // si querés abrir en la misma app cambialo por la función correspondiente
+                    window.location.href = 'aplicador_intereses.html';
+                });
+            }
+
+            // Botón: mostrar/ocultar las tabs de escuelas
+            if (btnAplicarPorCuota && seccionEscuelas) {
+                btnAplicarPorCuota.addEventListener('click', () => {
+                    seccionEscuelas.classList.toggle('oculto');
+
+                    // Si se está mostrando, enfocamos la primer tab por accesibilidad
+                    if (!seccionEscuelas.classList.contains('oculto')) {
+                        const firstTab = seccionEscuelas.querySelector('.tab');
+                        if (firstTab) firstTab.focus();
+                    }
+                });
+            }
+
+            // Manejar clics en las tabs de escuela
+            const tabs = document.querySelectorAll('#seccionEscuelas .tab');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    // quitar active a todas y poner en la seleccionada
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    const escuelaId = tab.dataset.escuela || tab.textContent.trim();
+                    // Actualizar títulos/labels de la UI
+                    const titulo = document.getElementById('tituloEscuela');
+                    const labelTabla = document.getElementById('labelEscuelaTabla');
+                    if (titulo) titulo.textContent = `Escuela: ${escuelaId}`;
+                    if (labelTabla) labelTabla.textContent = escuelaId;
+
+                    // Llamar a tu función existente para cambiar escuela si está definida
+                    if (typeof setEscuelaActiva === 'function') {
+                        setEscuelaActiva(escuelaId);
+                    } else if (typeof generarTablaCuotas === 'function') {
+                        // fallback: regenerar tabla si no existe setEscuelaActiva
+                        if (typeof window.escuelaActiva !== 'undefined') window.escuelaActiva = escuelaId;
+                        generarTablaCuotas();
+                    }
+                });
+
+                // Permitir selección por teclado (Enter / Space)
+                tab.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        tab.click();
+                    }
+                });
+
+                // Hacer las tabs focusables
+                tab.setAttribute('tabindex', '0');
+            });
+        });
+    </script>
+</body>
+
+</html>

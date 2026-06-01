@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Calculadora de Intereses - Cuotas</title>
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .contenedor {
+            display: flex;
+            flex-wrap: wrap;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            max-width: 1100px;
+            width: 100%;
+        }
+
+        .formulario {
+            flex: 1;
+            padding: 2rem;
+            background: #f9fafc;
+            min-width: 300px;
+        }
+
+        .resultado {
+            flex: 1;
+            background: #e9f7ef;
+            padding: 2rem;
+            animation: slideIn 0.6s ease;
+            border-left: 3px solid #007bff;
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 1.5rem;
+            color: #333;
+        }
+
+        label {
+            font-weight: 500;
+            display: block;
+            margin-top: 1rem;
+        }
+
+        select,
+        button {
+            width: 100%;
+            padding: 0.6rem;
+            margin-top: 0.5rem;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            margin-top: 1.5rem;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .info-section {
+            background: #fff;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+            max-width: 900px;
+            width: 100%;
+            margin-top: 2rem;
+        }
+
+        .tabla-cuotas {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabla-cuotas th,
+        .tabla-cuotas td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+
+        .tabla-cuotas th {
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+        }
+
+        .tabla-cuotas tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+
+        .tabla-cuotas tr:hover {
+            background-color: #e9ecef;
+        }
+
+        .tabla-cuotas td {
+            color: #495057;
+            font-weight: 500;
+        }
+
+        .tabla-cuotas td:first-child {
+            font-weight: 600;
+            color: #2c3e50;
+        }
+
+        .linea {
+            border-bottom: 1px dashed #999;
+            margin: 12px 0;
+        }
+
+        .chequeo-table th,
+        .chequeo-table td {
+            text-align: center;
+        }
+
+        .nota {
+            font-size: 0.9rem;
+            color: #444;
+            margin-top: 0.6rem;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="contenedor">
+        <div class="formulario">
+            <h2>💰 Calculadora de Intereses</h2>
+
+            <label>Escuela:</label>
+            <select id="escuela" onchange="mostrarTablaCuotas()">
+                <option>INICIAL-PRIMARIA</option>
+                <option>SECUNDARIA-NB</option>
+            </select>
+
+            <label>Tipo de Beca:</label>
+            <select id="beca">
+                <option>COMPLETO</option>
+                <option>BECA 75%</option>
+                <option>BECA 50%</option>
+                <option>BECA 25%</option>
+                <option>BECA 100%</option>
+            </select>
+
+            <label>Mes actual (hasta dónde chequear intereses):</label>
+            <select id="mesActual"></select>
+
+            <button onclick="calcularIntereses()">Calcular Intereses</button>
+        </div>
+
+        <div id="resultado" class="resultado"></div>
+    </div>
+
+    <div class="info-section">
+        <h3>Información de Cuotas Base (<span id="labelEscuelaTabla">INICIAL-PRIMARIA</span>)</h3>
+        <div id="tabla-cuotas"></div>
+    </div>
+
+    <script>
+        const ORDERED_MONTHS = ['MARZO', 'ABRIL', 'MAYO', 'JUNIO', 'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE', 'ENERO', 'FEBRERO'];
+
+        // Tasas mensuales (ejemplo)
+        const INTERESES_MAP = {
+            'MAYO': 0.0275,
+            'JUNIO': 0.0275,
+            'JULIO': 0,
+            'AGOSTO': 0,
+            'SEPTIEMBRE': 0,
+            'OCTUBRE': 0,
+            'NOVIEMBRE': 0,
+            'DICIEMBRE': 0,
+            'ENERO': 0,
+            'FEBRERO': 0
+        };
+
+        // CUOTAS por escuela y por mes (MARZO..NOVIEMBRE)
+        const CUOTAS_POR_ESCUELA = {
+            'INICIAL-PRIMARIA': {
+                'MARZO': { 'COMPLETO': 85690, 'BECA 75%': 34228.46, 'BECA 50%': 51384.02, 'BECA 25%': 68539.57, 'BECA 100%': 17072.91 },
+                'ABRIL': { 'COMPLETO': 91180, 'BECA 75%': 36382.78, 'BECA 50%': 54649.44, 'BECA 25%': 72916.11, 'BECA 100%': 18116.11 },
+                'MAYO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'JUNIO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'JULIO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'AGOSTO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'SEPTIEMBRE': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'OCTUBRE': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'NOVIEMBRE': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 }
+            },
+            'SECUNDARIA-NB': {
+                'MARZO': { 'COMPLETO': 94230, 'BECA 75%': 37483.01, 'BECA 50%': 56399.67, 'BECA 25%': 75316.34, 'BECA 100%': 18566.34 },
+                'ABRIL': { 'COMPLETO': 100280, 'BECA 75%': 39852.91, 'BECA 50%': 59997.35, 'BECA 25%': 80141.79, 'BECA 100%': 19708.47 },
+                'MAYO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'JUNIO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'JULIO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'AGOSTO': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'SEPTIEMBRE': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'OCTUBRE': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 },
+                'NOVIEMBRE': { 'COMPLETO': 0, 'BECA 75%': 0, 'BECA 50%': 0, 'BECA 25%': 0, 'BECA 100%': 0 }
+            }
+        };
+
+        // Regla anterior: para cada mes, el mes límite hasta el cual se aplica el interés
+        const REGLA_INTERESES = {
+            'MAYO': 'MARZO',
+            'JUNIO': 'ABRIL',
+            'JULIO': 'MAYO',
+            'AGOSTO': 'JUNIO',
+            'SEPTIEMBRE': 'JULIO',
+            'OCTUBRE': 'AGOSTO',
+            'NOVIEMBRE': 'SEPTIEMBRE',
+            'DICIEMBRE': 'OCTUBRE',
+            'ENERO': 'NOVIEMBRE',
+            'FEBRERO': 'NOVIEMBRE',
+        };
+
+        window.onload = () => {
+            const selMes = document.getElementById('mesActual');
+            ORDERED_MONTHS.forEach(m => {
+                const opt = document.createElement('option');
+                opt.text = m;
+                opt.value = m;
+                selMes.appendChild(opt);
+            });
+            mostrarTablaCuotas();
+        };
+
+        function mostrarTablaCuotas() {
+            const escuela = document.getElementById('escuela').value;
+            const label = document.getElementById('labelEscuelaTabla');
+            const tablaDiv = document.getElementById('tabla-cuotas');
+            const datos = CUOTAS_POR_ESCUELA[escuela];
+
+            label.textContent = escuela;
+
+            if (!datos) {
+                tablaDiv.innerHTML = "<p>No hay datos de cuotas para esta escuela.</p>";
+                return;
+            }
+
+            let tabla = `<table class="tabla-cuotas">
+                <thead>
+                    <tr>
+                        <th>Mes</th>
+                        <th>COMPLETO</th>
+                        <th>75%</th>
+                        <th>50%</th>
+                        <th>25%</th>
+                        <th>100%</th>
+                    </tr>
+                </thead>
+                <tbody>`;
+
+            for (const mes of ORDERED_MONTHS) {
+                if (!datos[mes]) continue;
+
+                const c = datos[mes];
+                tabla += `
+                    <tr>
+                        <td>${mes}</td>
+                        <td>$${formatNumber(c["COMPLETO"])}</td>
+                        <td>$${formatNumber(c["BECA 75%"])}</td>
+                        <td>$${formatNumber(c["BECA 50%"])}</td>
+                        <td>$${formatNumber(c["BECA 25%"])}</td>
+                        <td>$${formatNumber(c["BECA 100%"])}</td>
+                    </tr>`;
+            }
+
+            tabla += "</tbody></table>";
+            tablaDiv.innerHTML = tabla;
+        }
+
+        function calcularIntereses() {
+            const escuela = document.getElementById('escuela').value;
+            const beca = document.getElementById('beca').value;
+            const mesActual = document.getElementById('mesActual').value;
+            const resultado = document.getElementById('resultado');
+
+            if (!ORDERED_MONTHS.includes(mesActual)) {
+                resultado.innerHTML = '<p>Seleccioná un mes válido.</p>';
+                resultado.style.display = 'block';
+                return;
+            }
+
+            // Parte 1: Regla anterior (solo si existe, si no, mensaje informativo)
+            let detalleAnterior = '';
+            if (REGLA_INTERESES.hasOwnProperty(mesActual)) {
+                const mesLimite = REGLA_INTERESES[mesActual];
+                const idxLimite = ORDERED_MONTHS.indexOf(mesLimite);
+                const interesActual = INTERESES_MAP[mesActual] || 0;
+
+                let salida = `<h3>💡 Resultados según regla anterior — ${mesActual}</h3><hr>`;
+                let totalInteres = 0;
+
+                for (let i = 0; i <= idxLimite; i++) {
+                    const mes = ORDERED_MONTHS[i];
+                    const cuota = CUOTAS_POR_ESCUELA[escuela]?.[mes]?.[beca];
+                    if (!cuota) continue;
+
+                    const montoInteres = cuota * interesActual;
+                    totalInteres += montoInteres;
+
+                    salida += `
+                        <div><b>${mes}:</b> Interés ${(interesActual * 100).toFixed(2)}% → $${formatNumber(montoInteres)}</div>
+                        <div class="linea"></div>
+                    `;
+                }
+
+                salida += `<h4>Total intereses aplicados: $${formatNumber(totalInteres)}</h4>`;
+                detalleAnterior = salida;
+            } else {
+                detalleAnterior = `<p><em>No hay una regla de intereses predefinida para "${mesActual}". Se muestra a continuación el cálculo acumulado por cuota base, que sí contempla este mes.</em></p>`;
+            }
+
+            // Parte 2: Cálculo acumulado por cuota base (MARZO..NOVIEMBRE) usando la misma regla
+            const chequearHastaIdx = ORDERED_MONTHS.indexOf(mesActual);
+            const baseMonths = ORDERED_MONTHS.slice(0, ORDERED_MONTHS.indexOf('NOVIEMBRE') + 1); // MARZO..NOVIEMBRE
+
+            let tablaChequeo = `
+                <h3>🔎 Chequeo acumulado por cuota base (según regla)</h3>
+                <table class="tabla-cuotas chequeo-table">
+                    <thead>
+                        <tr>
+                            <th>Mes Base</th>
+                            <th>Cuota base (${beca})</th>
+                            <th>Total intereses aplicados</th>
+                            <th>Valor final (base + intereses)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            let anyRow = false;
+            for (const baseMes of baseMonths) {
+                const cuota = CUOTAS_POR_ESCUELA[escuela]?.[baseMes]?.[beca];
+                if (!cuota) continue;
+
+                let totalInteresAplicado = 0;
+                const idxBase = ORDERED_MONTHS.indexOf(baseMes);
+
+                // Iterar sobre los meses tasa que sean <= mesActual
+                for (const [mesTasa, tasa] of Object.entries(INTERESES_MAP)) {
+                    const idxTasa = ORDERED_MONTHS.indexOf(mesTasa);
+                    if (idxTasa === -1 || idxTasa > chequearHastaIdx) continue; // solo meses hasta el actual
+
+                    const mesLimite = REGLA_INTERESES[mesTasa];
+                    if (!mesLimite) continue;
+                    const idxLimite = ORDERED_MONTHS.indexOf(mesLimite);
+                    if (idxLimite === -1) continue;
+
+                    // Si el mes base está dentro del rango [MARZO, mesLimite] (incluye MARZO y mesLimite)
+                    if (idxBase <= idxLimite) {
+                        totalInteresAplicado += cuota * tasa;
+                    }
+                }
+
+                const valorFinal = cuota + totalInteresAplicado;
+                tablaChequeo += `
+                    <tr>
+                        <td>${baseMes}</td>
+                        <td>$${formatNumber(cuota)}</td>
+                        <td>$${formatNumber(totalInteresAplicado)}</td>
+                        <td>$${formatNumber(valorFinal)}</td>
+                    </tr>
+                `;
+                anyRow = true;
+            }
+
+            if (!anyRow) {
+                tablaChequeo += `<tr><td colspan="4">No hay cuotas base (MARZO..NOVIEMBRE) para la escuela/beca seleccionada.</td></tr>`;
+            }
+
+            tablaChequeo += `</tbody></table>`;
+
+            // Mostramos ambas secciones
+            resultado.innerHTML = detalleAnterior + '<div style="margin-top:18px;"></div>' + tablaChequeo;
+            resultado.style.display = 'block';
+        }
+
+        function formatNumber(n) {
+            return Number(n).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+    </script>
+</body>
+
+</html>
